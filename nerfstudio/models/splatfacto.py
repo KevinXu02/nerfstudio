@@ -213,7 +213,7 @@ class SplatfactoModel(Model):
             self.direction_encoding = None
         if self.config.enbale_appearance_embedding:
             features_dc = torch.nn.Parameter(torch.zeros(num_points, self.config.color_feature_dim))
-            features_rest = torch.nn.Parameter(torch.zeros(num_points, 0))
+            features_rest = torch.nn.Parameter(torch.zeros(num_points, 0, 0))
         elif (
             self.seed_points is not None
             and not self.config.random_init
