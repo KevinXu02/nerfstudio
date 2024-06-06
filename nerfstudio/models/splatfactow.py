@@ -46,6 +46,7 @@ from nerfstudio.utils.colors import get_color
 from nerfstudio.utils.rich_utils import CONSOLE
 
 
+
 def random_quat_tensor(N):
     """
     Defines a random quaternion tensor of shape (N, 4)
@@ -699,6 +700,7 @@ class SplatfactoWModel(Model):
         Returns:
             Outputs of model. (ie. rendered colors)
         """
+
         if not isinstance(camera, Cameras):
             print("Called get_outputs with not a camera")
             return {}
@@ -920,6 +922,8 @@ class SplatfactoWModel(Model):
         # Set masked part of both ground-truth and rendered image to black.
         # This is a little bit sketchy for the SSIM loss.
         if "mask" in batch:
+            print("mask in batch!!!!!!!!!")
+            # exit()
             # batch["mask"] : [H, W, 1]
             mask = self._downscale_if_required(batch["mask"])
             mask = mask.to(self.device)
@@ -998,6 +1002,41 @@ class SplatfactoWModel(Model):
         outs = self.get_outputs(camera.to(self.device))
         return outs  # type: ignore
 
+    # def get_image_metrics_and_images(
+    #     self, outputs: Dict[str, torch.Tensor], batch: Dict[str, torch.Tensor]
+    # ) -> Tuple[Dict[str, float], Dict[str, torch.Tensor]]:
+    #     """Writes the test image outputs.
+
+    #     Args:
+    #         image_idx: Index of the image.
+    #         step: Current step.
+    #         batch: Batch of data.
+    #         outputs: Outputs of the model.
+
+    #     Returns:
+    #         A dictionary of metrics.
+    #     """
+    #     gt_rgb = self.composite_with_background(self.get_gt_img(batch["image"]), outputs["background"])
+    #     predicted_rgb = outputs["rgb"]
+
+    #     combined_rgb = torch.cat([gt_rgb, predicted_rgb], dim=1)
+
+    #     # Switch images from [H, W, C] to [1, C, H, W] for metrics computations
+    #     gt_rgb = torch.moveaxis(gt_rgb, -1, 0)[None, ...]
+    #     predicted_rgb = torch.moveaxis(predicted_rgb, -1, 0)[None, ...]
+
+    #     psnr = self.psnr(gt_rgb, predicted_rgb)
+    #     ssim = self.ssim(gt_rgb, predicted_rgb)
+    #     lpips = self.lpips(gt_rgb, predicted_rgb)
+
+    #     # all of these metrics will be logged as scalars
+    #     metrics_dict = {"psnr": float(psnr.item()), "ssim": float(ssim)}  # type: ignore
+    #     metrics_dict["lpips"] = float(lpips)
+
+    #     images_dict = {"img": combined_rgb}
+
+    #     return metrics_dict, images_dict
+
     def get_image_metrics_and_images(
         self, outputs: Dict[str, torch.Tensor], batch: Dict[str, torch.Tensor]
     ) -> Tuple[Dict[str, float], Dict[str, torch.Tensor]]:
@@ -1012,10 +1051,20 @@ class SplatfactoWModel(Model):
         Returns:
             A dictionary of metrics.
         """
+
         gt_rgb = self.composite_with_background(self.get_gt_img(batch["image"]), outputs["background"])
         predicted_rgb = outputs["rgb"]
 
+        # hacked version, only eval on the right half of the image
+        # cut the image in half,HW3
+        gt_rgb = gt_rgb[:, gt_rgb.shape[1] // 2 :, :]
+        predicted_rgb = predicted_rgb[:, predicted_rgb.shape[1] // 2 :, :]
+
         combined_rgb = torch.cat([gt_rgb, predicted_rgb], dim=1)
+        # cv2.imwrite("gt.png", (gt_rgb.detach().cpu().numpy() * 255).astype(np.uint8))
+        # cv2.imwrite("p.png", (predicted_rgb.detach().cpu().numpy() * 255).astype(np.uint8))
+        # cv2.imwrite("c.png", (combined_rgb.detach().cpu().numpy() * 255).astype(np.uint8))
+        # exit()
 
         # Switch images from [H, W, C] to [1, C, H, W] for metrics computations
         gt_rgb = torch.moveaxis(gt_rgb, -1, 0)[None, ...]

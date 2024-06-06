@@ -81,6 +81,7 @@ class Phototourism(DataParser):
     def __init__(self, config: PhototourismDataParserConfig):
         super().__init__(config=config)
         self.data: Path = config.data
+        self.i_eval = None
 
     def _generate_dataparser_outputs(self, split="train"):
         image_filenames = []
@@ -136,12 +137,14 @@ class Phototourism(DataParser):
             0, num_images - 1, num_train_images, dtype=int
         )  # equally spaced training images starting and ending at 0 and num_images-1
         i_eval = np.setdiff1d(i_all, i_train)  # eval images are the remaining images
+        # change ievel to list
+        self.i_eval = i_eval.tolist()
         i_all = torch.tensor(i_all)
         i_train = torch.tensor(i_train, dtype=torch.long)
         i_eval = torch.tensor(i_eval, dtype=torch.long)
         assert len(i_eval) == num_eval_images
         if split == "train":
-            indices = i_train
+            indices = i_all
         elif split in ["val", "test"]:
             indices = i_eval
         else:
@@ -260,3 +263,6 @@ class Phototourism(DataParser):
             out["points3D_image_ids"] = torch.stack(points3D_image_ids, dim=0)
             out["points3D_points2D_xy"] = torch.stack(points3D_image_xy, dim=0)
         return out
+
+    def check_in_eval(self, idx):
+        return idx in self.i_eval

@@ -171,6 +171,12 @@ class FullImageDatamanager(DataManager, Generic[TDataset]):
             data["image"] = torch.from_numpy(image)
             if mask is not None:
                 data["mask"] = mask
+            ###################
+            if self.dataparser.check_in_eval(idx):
+                H, W, _ = data["image"].shape
+                # mask right half of image
+                data["mask"] = torch.zeros(H, W, 1).to("cpu")
+                data["mask"][:, : data["image"].shape[1] // 2, :] = 1
 
             dataset.cameras.fx[idx] = float(K[0, 0])
             dataset.cameras.fy[idx] = float(K[1, 1])
