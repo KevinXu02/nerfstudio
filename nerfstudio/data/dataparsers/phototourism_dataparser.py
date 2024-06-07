@@ -181,6 +181,7 @@ class Phototourism(DataParser):
         )
         cameras = cameras[indices]
         for i in range(len(cameras)):
+            cameras[i].metadata = {}
             cameras[i].metadata["cam_idx"] = indices[i]
         image_filenames = [image_filenames[i] for i in indices]
         metadata = {}
