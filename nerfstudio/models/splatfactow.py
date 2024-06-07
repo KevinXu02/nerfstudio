@@ -170,11 +170,11 @@ class SplatfactoWModelConfig(ModelConfig):
     """Whether to enable the alpha loss for punishing gaussians from occupying background space, this also works with pure color background (i.e. white for overexposed skys)"""
     appearance_features_dim: int = 72
     """Dimension of the appearance feature"""
-    enable_robust_mask: bool = False
+    enable_robust_mask: bool = True
     """Whether to enable robust mask for calculating the loss"""
     robust_mask_percentage: tuple = (0, 0.35)
     """The percentage of the entire image to mask out for robust loss calculation"""
-    robust_mask_reset_interval: int = 6000
+    robust_mask_reset_interval: int = 8000
     """The interval to reset the mask"""
     never_mask_upper: float = 0.4
     """Whether to mask out the upper part of the image, which is usually the sky"""
