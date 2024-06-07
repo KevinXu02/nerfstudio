@@ -710,7 +710,7 @@ method_configs["splatfacto-big"] = TrainerConfig(
 )
 method_configs["splatfacto-w"] = TrainerConfig(
     method_name="splatfacto-w",
-    steps_per_eval_image=500,
+    steps_per_eval_image=100,
     steps_per_eval_batch=0,
     steps_per_save=2000,
     steps_per_eval_all_images=5000,

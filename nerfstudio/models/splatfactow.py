@@ -170,9 +170,9 @@ class SplatfactoWModelConfig(ModelConfig):
     """Whether to enable the alpha loss for punishing gaussians from occupying background space, this also works with pure color background (i.e. white for overexposed skys)"""
     appearance_features_dim: int = 72
     """Dimension of the appearance feature"""
-    enable_robust_mask: bool = True
+    enable_robust_mask: bool = False
     """Whether to enable robust mask for calculating the loss"""
-    robust_mask_percentage: tuple = (0.05, 0.4)
+    robust_mask_percentage: tuple = (0, 0.35)
     """The percentage of the entire image to mask out for robust loss calculation"""
     robust_mask_reset_interval: int = 6000
     """The interval to reset the mask"""
@@ -1053,13 +1053,13 @@ class SplatfactoWModel(Model):
 
         gt_rgb = self.composite_with_background(self.get_gt_img(batch["image"]), outputs["background"])
         predicted_rgb = outputs["rgb"]
+        combined_rgb = torch.cat([gt_rgb, predicted_rgb], dim=1)
 
         # hacked version, only eval on the right half of the image
         # cut the image in half,HW3
         gt_rgb = gt_rgb[:, gt_rgb.shape[1] // 2 :, :]
         predicted_rgb = predicted_rgb[:, predicted_rgb.shape[1] // 2 :, :]
 
-        combined_rgb = torch.cat([gt_rgb, predicted_rgb], dim=1)
         # cv2.imwrite("gt.png", (gt_rgb.detach().cpu().numpy() * 255).astype(np.uint8))
         # cv2.imwrite("p.png", (predicted_rgb.detach().cpu().numpy() * 255).astype(np.uint8))
         # cv2.imwrite("c.png", (combined_rgb.detach().cpu().numpy() * 255).astype(np.uint8))

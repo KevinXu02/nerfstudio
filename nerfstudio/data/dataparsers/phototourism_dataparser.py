@@ -48,7 +48,7 @@ class PhototourismDataParserConfig(DataParserConfig):
     """How much to scale the camera origins by."""
     alpha_color: str = "white"
     """alpha color of background"""
-    train_split_fraction: float = 0.9
+    train_split_fraction: float = 0.8
     """The fraction of images to use for training. The remaining images are for eval."""
     scene_scale: float = 1.0
     """How much to scale the region of interest by."""
