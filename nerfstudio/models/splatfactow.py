@@ -102,7 +102,7 @@ class SplatfactoWModelConfig(ModelConfig):
     _target: Type = field(default_factory=lambda: SplatfactoWModel)
     warmup_length: int = 500
     """period of steps where refinement is turned off"""
-    refine_every: int = 100
+    refine_every: int = 150
     """period of steps where gaussians are culled and densified"""
     resolution_schedule: int = 3000
     """training starts at 1/d resolution, every n steps this is doubled"""
