@@ -161,9 +161,7 @@ class FullImageDatamanager(DataManager, Generic[TDataset]):
             #     f'The size of image ({data["image"].shape[1]}, {data["image"].shape[0]}) loaded '
             #     f'does not match the camera parameters ({camera.width.item(), camera.height.item()})'
             # )
-            if data["image"].shape[1] != camera.width.item() or data["image"].shape[0] != camera.height.item():
-                # print(f"Skipping image at index {idx} due to size mismatch")
-                return None
+            # assert (data["image"].shape[1] != camera.width.item() or data["image"].shape[0] != camera.height.item())
             if camera.distortion_params is None or torch.all(camera.distortion_params == 0):
                 return data
             K = camera.get_intrinsics_matrices().numpy()
@@ -174,12 +172,6 @@ class FullImageDatamanager(DataManager, Generic[TDataset]):
             data["image"] = torch.from_numpy(image)
             if mask is not None:
                 data["mask"] = mask
-            ###################
-            if self.dataparser.check_in_eval(idx) and split == "train":
-                H, W, _ = data["image"].shape
-                # mask right half of image
-                data["mask"] = torch.zeros(H, W, 1).to("cpu")
-                data["mask"][:, : data["image"].shape[1] // 2, :] = 1
 
             dataset.cameras.fx[idx] = float(K[0, 0])
             dataset.cameras.fy[idx] = float(K[1, 1])
@@ -206,16 +198,14 @@ class FullImageDatamanager(DataManager, Generic[TDataset]):
         # Move to device.
         if cache_images_device == "gpu":
             for cache in undistorted_images:
-                if cache["image"] is not None:
-                    cache["image"] = cache["image"].to(self.device)
-                    if "mask" in cache:
-                        cache["mask"] = cache["mask"].to(self.device)
+                cache["image"] = cache["image"].to(self.device)
+                if "mask" in cache:
+                    cache["mask"] = cache["mask"].to(self.device)
         elif cache_images_device == "cpu":
             for cache in undistorted_images:
-                if cache["image"] is not None:
-                    cache["image"] = cache["image"].pin_memory()
-                    if "mask" in cache:
-                        cache["mask"] = cache["mask"].pin_memory()
+                cache["image"] = cache["image"].pin_memory()
+                if "mask" in cache:
+                    cache["mask"] = cache["mask"].pin_memory()
         else:
             assert_never(cache_images_device)
 
@@ -281,6 +271,7 @@ class FullImageDatamanager(DataManager, Generic[TDataset]):
         for i in image_indices:
             data[i]["image"] = data[i]["image"].to(self.device)
             cameras.append(_cameras[i : i + 1])
+            cameras[i].metadata = {"cam_idx": self.dataparser.find_eval_idx(i)}
         assert len(self.eval_dataset.cameras.shape) == 1, "Assumes single batch dimension"
         return list(zip(cameras, data))
 
@@ -304,18 +295,27 @@ class FullImageDatamanager(DataManager, Generic[TDataset]):
         if len(self.train_unseen_cameras) == 0:
             self.train_unseen_cameras = [i for i in range(len(self.train_dataset))]
 
-        # skip images that are not the right size
-        if self.cached_train[image_idx] is None:
-            return self.next_train(step=step)
         data = deepcopy(self.cached_train[image_idx])
         data["image"] = data["image"].to(self.device)
 
         assert len(self.train_dataset.cameras.shape) == 1, "Assumes single batch dimension"
         camera = self.train_dataset.cameras[image_idx : image_idx + 1].to(self.device)
+        if data["image"].shape[1] != camera.width.item() or data["image"].shape[0] != camera.height.item():
+            CONSOLE.log(
+                f"Image shape: {data['image'].shape} does not match camera shape: {camera.width.item()} x {camera.height.item()}"
+            )
+            return self.next_train(step)
+
+        if self.dataparser.check_in_eval(image_idx):
+            # CONSOLE.log(f"Masking image index {image_idx} in training as it is in eval")
+            H, W, _ = data["image"].shape
+            # mask right half of image
+            data["mask"] = torch.zeros(H, W, 1).to(self.device)
+            data["mask"][:, : W // 2, :] = 1
+
         if camera.metadata is None:
-            raise ValueError("Camera metadata does not contain cam_idx")
             camera.metadata = {}
-            camera.metadata["cam_idx"] = image_idx
+        camera.metadata["cam_idx"] = image_idx
         return camera, data
 
     def next_eval(self, step: int) -> Tuple[Cameras, Dict]:
@@ -334,14 +334,16 @@ class FullImageDatamanager(DataManager, Generic[TDataset]):
         # Make sure to re-populate the unseen cameras list if we have exhausted it
         if len(self.eval_unseen_cameras) == 0:
             self.eval_unseen_cameras = [i for i in range(len(self.eval_dataset))]
-        # skip images that are not the right size
-        if self.cached_eval[image_idx] is None:
-            return self.next_eval_image(step=step)
 
         data = deepcopy(self.cached_eval[image_idx])
         data["image"] = data["image"].to(self.device)
         assert len(self.eval_dataset.cameras.shape) == 1, "Assumes single batch dimension"
         camera = self.eval_dataset.cameras[image_idx : image_idx + 1].to(self.device)
+        if camera.metadata is None:
+            camera.metadata={}
+        idx= self.dataparser.find_eval_idx(image_idx)
+        camera.metadata["cam_idx"] = idx
+        CONSOLE.log(f"Current eval image index: {idx}")
 
         return camera, data
 

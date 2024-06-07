@@ -923,8 +923,6 @@ class SplatfactoWModel(Model):
         # Set masked part of both ground-truth and rendered image to black.
         # This is a little bit sketchy for the SSIM loss.
         if "mask" in batch:
-            print("mask in batch!!!!!!!!!")
-            # exit()
             # batch["mask"] : [H, W, 1]
             mask = self._downscale_if_required(batch["mask"])
             mask = mask.to(self.device)

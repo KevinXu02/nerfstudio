@@ -180,9 +180,6 @@ class Phototourism(DataParser):
             camera_type=CameraType.PERSPECTIVE,
         )
         cameras = cameras[indices]
-        for i in range(len(cameras)):
-            cameras[i].metadata = {}
-            cameras[i].metadata["cam_idx"] = indices[i]
         image_filenames = [image_filenames[i] for i in indices]
         metadata = {}
         if self.config.load_3D_points:
@@ -268,3 +265,6 @@ class Phototourism(DataParser):
 
     def check_in_eval(self, idx):
         return idx in self.i_eval
+    
+    def find_eval_idx(self, idx):
+        return self.i_eval[idx]
