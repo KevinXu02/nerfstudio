@@ -139,7 +139,7 @@ class Phototourism(DataParser):
         i_eval = np.setdiff1d(i_all, i_train)  # eval images are the remaining images
         # change ievel to list
         self.i_eval = i_eval.tolist()
-        i_all = torch.tensor(i_all)
+        i_all = torch.tensor(i_all, dtype=torch.long)
         i_train = torch.tensor(i_train, dtype=torch.long)
         i_eval = torch.tensor(i_eval, dtype=torch.long)
         assert len(i_eval) == num_eval_images
@@ -179,7 +179,8 @@ class Phototourism(DataParser):
             cy=cys,
             camera_type=CameraType.PERSPECTIVE,
         )
-
+        for idx in range(len(cameras)):
+            cameras[idx].metadata = {"cam_idx": idx}
         cameras = cameras[indices]
         image_filenames = [image_filenames[i] for i in indices]
         metadata = {}

@@ -46,7 +46,6 @@ from nerfstudio.utils.colors import get_color
 from nerfstudio.utils.rich_utils import CONSOLE
 
 
-
 def random_quat_tensor(N):
     """
     Defines a random quaternion tensor of shape (N, 4)
@@ -711,6 +710,8 @@ class SplatfactoWModel(Model):
                 cam_idx = camera.metadata["cam_idx"]
                 appearance_embed = self.appearance_embeds(torch.tensor(cam_idx, device=self.device))
             else:
+                # should not happen
+                raise ValueError("Camera metadata does not have cam_idx")
                 appearance_embed = self.appearance_embeds(torch.tensor(0, device=self.device))
         else:
             appearance_embed = None
