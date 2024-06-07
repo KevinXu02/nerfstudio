@@ -179,9 +179,9 @@ class Phototourism(DataParser):
             cy=cys,
             camera_type=CameraType.PERSPECTIVE,
         )
-        for idx in range(len(cameras)):
-            cameras[idx].metadata = {"cam_idx": idx}
         cameras = cameras[indices]
+        for i in range(len(cameras)):
+            cameras[i].metadata["cam_idx"] = indices[i]
         image_filenames = [image_filenames[i] for i in indices]
         metadata = {}
         if self.config.load_3D_points:
