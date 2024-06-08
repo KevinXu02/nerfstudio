@@ -157,11 +157,10 @@ class FullImageDatamanager(DataManager, Generic[TDataset]):
         def undistort_idx(idx: int) -> Dict[str, torch.Tensor]:
             data = dataset.get_data(idx, image_type=self.config.cache_images_type)
             camera = dataset.cameras[idx].reshape(())
-            # assert data["image"].shape[1] == camera.width.item() and data["image"].shape[0] == camera.height.item(), (
-            #     f'The size of image ({data["image"].shape[1]}, {data["image"].shape[0]}) loaded '
-            #     f'does not match the camera parameters ({camera.width.item(), camera.height.item()})'
-            # )
-            # assert (data["image"].shape[1] != camera.width.item() or data["image"].shape[0] != camera.height.item())
+            assert data["image"].shape[1] == camera.width.item() and data["image"].shape[0] == camera.height.item(), (
+                f'The size of image ({data["image"].shape[1]}, {data["image"].shape[0]}) loaded '
+                f'does not match the camera parameters ({camera.width.item(), camera.height.item()})'
+            )
             if camera.distortion_params is None or torch.all(camera.distortion_params == 0):
                 return data
             K = camera.get_intrinsics_matrices().numpy()
@@ -182,7 +181,7 @@ class FullImageDatamanager(DataManager, Generic[TDataset]):
             return data
 
         CONSOLE.log(f"Caching / undistorting {split} images")
-        with ThreadPoolExecutor() as executor:
+        with ThreadPoolExecutor(max_workers=2) as executor:
             undistorted_images = list(
                 track(
                     executor.map(
@@ -201,13 +200,13 @@ class FullImageDatamanager(DataManager, Generic[TDataset]):
                 cache["image"] = cache["image"].to(self.device)
                 if "mask" in cache:
                     cache["mask"] = cache["mask"].to(self.device)
-        elif cache_images_device == "cpu":
-            for cache in undistorted_images:
-                cache["image"] = cache["image"].pin_memory()
-                if "mask" in cache:
-                    cache["mask"] = cache["mask"].pin_memory()
-        else:
-            assert_never(cache_images_device)
+        # elif cache_images_device == "cpu":
+        #     for cache in undistorted_images:
+        #         cache["image"] = cache["image"].pin_memory()
+        #         if "mask" in cache:
+        #             cache["mask"] = cache["mask"].pin_memory()
+        # else:
+        #     assert_never(cache_images_device)
 
         return undistorted_images
 

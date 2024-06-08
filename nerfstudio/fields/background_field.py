@@ -18,7 +18,7 @@ class BG_Field(Field):
         self.mlp_background_color = MLP(
             in_dim=self.direction_encoding.get_out_dim() + appearance_embedding_dim,
             num_layers=2,
-            layer_width=128,
+            layer_width=64,
             out_dim=3,
             activation=nn.ReLU(),
             out_activation=nn.Sigmoid(),
