@@ -710,11 +710,11 @@ method_configs["splatfacto-big"] = TrainerConfig(
 )
 method_configs["splatfacto-w"] = TrainerConfig(
     method_name="splatfacto-w",
-    steps_per_eval_image=100,
+    steps_per_eval_image=1000000,
     steps_per_eval_batch=0,
     steps_per_save=2000,
-    steps_per_eval_all_images=5000,
-    max_num_iterations=65001,
+    steps_per_eval_all_images=1000000,
+    max_num_iterations=65000,
     mixed_precision=False,
     pipeline=VanillaPipelineConfig(
         datamanager=FullImageDatamanagerConfig(
@@ -733,10 +733,7 @@ method_configs["splatfacto-w"] = TrainerConfig(
         },
         "appearance_features": {
             "optimizer": AdamOptimizerConfig(lr=0.02, eps=1e-15),
-            "scheduler": ExponentialDecaySchedulerConfig(
-                lr_final=1e-3,
-                max_steps=40000,
-            ),
+            "scheduler": MultiStepSchedulerConfig(max_steps=65000, milestones=(5000, 10000, 15000, 20000, 30000)),
         },
         "opacities": {
             "optimizer": AdamOptimizerConfig(lr=0.03, eps=1e-15),
@@ -761,7 +758,8 @@ method_configs["splatfacto-w"] = TrainerConfig(
         },
         "appearance_embed": {
             "optimizer": AdamOptimizerConfig(lr=0.02, eps=1e-15),
-            "scheduler": ExponentialDecaySchedulerConfig(lr_final=3e-4, max_steps=40000),
+            # "scheduler": ExponentialDecaySchedulerConfig(lr_final=3e-4, max_steps=40000),
+            "scheduler": MultiStepSchedulerConfig(max_steps=65000, milestones=(10000, 20000, 30000), gamma=0.1),
         },
     },
     viewer=ViewerConfig(num_rays_per_chunk=1 << 15),
