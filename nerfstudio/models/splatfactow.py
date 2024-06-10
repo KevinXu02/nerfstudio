@@ -102,7 +102,7 @@ class SplatfactoWModelConfig(ModelConfig):
     _target: Type = field(default_factory=lambda: SplatfactoWModel)
     warmup_length: int = 2000
     """period of steps where refinement is turned off"""
-    refine_every: int = 150
+    refine_every: int = 100
     """period of steps where gaussians are culled and densified"""
     resolution_schedule: int = 3000
     """training starts at 1/d resolution, every n steps this is doubled"""
@@ -172,9 +172,9 @@ class SplatfactoWModelConfig(ModelConfig):
     """Dimension of the appearance feature"""
     enable_robust_mask: bool = True
     """Whether to enable robust mask for calculating the loss"""
-    robust_mask_percentage: tuple = (0, 0.35)
+    robust_mask_percentage: tuple = (0.05, 0.40)
     """The percentage of the entire image to mask out for robust loss calculation"""
-    robust_mask_reset_interval: int = 8000
+    robust_mask_reset_interval: int = 6000
     """The interval to reset the mask"""
     never_mask_upper: float = 0.4
     """Whether to mask out the upper part of the image, which is usually the sky"""
