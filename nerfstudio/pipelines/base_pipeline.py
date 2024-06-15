@@ -425,7 +425,7 @@ class VanillaPipeline(Pipeline):
         """Get the average metrics for evaluation images."""
 
         """Get the average metrics for evaluation images."""
-        assert isinstance(self.datamanager, (VanillaDataManager, ParallelDataManager, FullImageDatamanager))
+        # assert isinstance(self.datamanager, (VanillaDataManager, ParallelDataManager, FullImageDatamanager))
         image_prefix = "eval"
         return self.get_average_image_metrics(
             self.datamanager.fixed_indices_eval_dataloader, image_prefix, step, output_path, get_std
