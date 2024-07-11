@@ -46,6 +46,8 @@ from nerfstudio.utils.colors import get_color
 from nerfstudio.utils.misc import torch_compile
 from nerfstudio.utils.rich_utils import CONSOLE
 
+from gsplat.cuda._wrapper import spherical_harmonics
+
 
 def random_quat_tensor(N):
     """
@@ -185,13 +187,13 @@ class SplatfactoModelConfig(ModelConfig):
     """
     camera_optimizer: CameraOptimizerConfig = field(default_factory=lambda: CameraOptimizerConfig(mode="off"))
     """Config of the camera optimizer to use"""
-    enable_bg_model: bool = False
+    enable_bg_model: bool = True
     """Whether to enable the 2d background model"""
     implementation: Literal["tcnn", "torch"] = "tcnn"
     """Implementation of the background model"""
     appearance_embed_dim: int = 0
     """Dimension of the appearance embedding for background model, if 0, no appearance embedding is used"""
-    enable_alpha_loss: bool = False
+    enable_alpha_loss: bool = True
     """Whether to enable the alpha loss for punishing gaussians from occupying background space, this also works with pure color background (i.e. white for overexposed skys)"""
 
 
@@ -287,12 +289,15 @@ class SplatfactoModel(Model):
             self.appearance_embeds = None
 
         if self.config.enable_bg_model:
-            self.bg_model = BGField(
-                appearance_embedding_dim=self.config.appearance_embed_dim,
-                implementation=self.config.implementation,
-            )
+            # self.bg_model = BGField(
+            #     appearance_embedding_dim=self.config.appearance_embed_dim,
+            #     implementation=self.config.implementation,
+            # )
+            # sh bases for background model
+            self.bg_dc = torch.nn.Parameter(torch.zeros((1, 3)))
+            self.bg_features = torch.nn.Parameter(torch.zeros((24, 3)))
         else:
-            self.bg_model = None
+            self.bg_dc = None
 
     @property
     def colors(self):
@@ -671,8 +676,10 @@ class SplatfactoModel(Model):
         gps = self.get_gaussian_param_groups()
         self.camera_optimizer.get_param_groups(param_groups=gps)
         if self.config.enable_bg_model:
-            assert self.bg_model is not None
-            gps["field_background"] = list(self.bg_model.parameters())
+            assert self.bg_dc is not None
+            gps["field_background"] = [self.bg_dc]
+            gps["field_background_features"] = [self.bg_features]
+
         if self.config.appearance_embed_dim > 0:
             assert self.appearance_embeds is not None
             gps["appearance_embed"] = list(self.appearance_embeds.parameters())
@@ -822,6 +829,30 @@ class SplatfactoModel(Model):
         alpha = alpha[:, ...]
 
         background = self._get_background_color()
+        # if self.config.enable_bg_model:
+        #     # the following code uses the background model to predict the background color
+        #     # only predict background where alpha < 0.98 for faster inference
+        #     # use first num_downscales*resolution_schedule steps to clean up the background in the beginning
+        #     if self.step < self.config.num_downscales * self.config.resolution_schedule and self.training:
+        #         mask = torch.ones(H, W, device=self.device, dtype=torch.bool)
+        #     else:
+        #         mask = (alpha < 0.98).view(H, W)
+        #     coords_y, coords_x = torch.nonzero(mask, as_tuple=True)
+        #     coords = torch.stack([coords_y, coords_x], dim=-1).float()
+        #     if coords.shape[0] > 0:
+        #         ray_bundle = camera.generate_rays(camera_indices=0, keep_shape=False, coords=coords)
+        #         # Background processing
+        #         background = torch.zeros(H * W, 3, device=self.device)
+        #         flat_mask = mask.view(-1)
+        #         assert self.bg_model is not None
+        #         background[flat_mask] = self.bg_model.get_background_rgb(ray_bundle, appearance_embed).float()
+        #         background = background.view(1, H, W, 3)
+        #         rgb = render[:, ..., :3] + (1 - alpha) * background
+        #     else:
+        #         rgb = render[:, ..., :3]
+        # else:
+        #     rgb = render[:, ..., :3] + (1 - alpha) * background
+
         if self.config.enable_bg_model:
             # the following code uses the background model to predict the background color
             # only predict background where alpha < 0.98 for faster inference
@@ -834,12 +865,19 @@ class SplatfactoModel(Model):
             coords = torch.stack([coords_y, coords_x], dim=-1).float()
             if coords.shape[0] > 0:
                 ray_bundle = camera.generate_rays(camera_indices=0, keep_shape=False, coords=coords)
+                dirs = ray_bundle.directions
                 # Background processing
                 background = torch.zeros(H * W, 3, device=self.device)
                 flat_mask = mask.view(-1)
-                assert self.bg_model is not None
-                background[flat_mask] = self.bg_model.get_background_rgb(ray_bundle, appearance_embed).float()
+                assert self.bg_dc is not None
+                self.bg_color = torch.cat((self.bg_dc, self.bg_features), dim=0)
+                background[flat_mask] = spherical_harmonics(
+                    4,
+                    dirs,
+                    self.bg_color.repeat(dirs.shape[0], 1, 1),
+                ).float()
                 background = background.view(1, H, W, 3)
+
                 rgb = render[:, ..., :3] + (1 - alpha) * background
             else:
                 rgb = render[:, ..., :3]

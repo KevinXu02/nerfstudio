@@ -642,8 +642,12 @@ method_configs["splatfacto"] = TrainerConfig(
             ),
         },
         "field_background": {
-            "optimizer": AdamOptimizerConfig(lr=4e-3, eps=1e-15),
-            "scheduler": ExponentialDecaySchedulerConfig(lr_final=1e-4, max_steps=30000),
+            "optimizer": AdamOptimizerConfig(lr=1e-2, eps=1e-15),
+            "scheduler": ExponentialDecaySchedulerConfig(lr_final=0.0025, max_steps=10000),
+        },
+        "field_background_features": {
+            "optimizer": AdamOptimizerConfig(lr=0.01 / 20, eps=1e-15),
+            "scheduler": ExponentialDecaySchedulerConfig(lr_final=0.0025 / 20, max_steps=10000),
         },
         "appearance_embed": {
             "optimizer": AdamOptimizerConfig(lr=0.02, eps=1e-15),
